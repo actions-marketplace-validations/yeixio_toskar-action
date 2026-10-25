@@ -13,7 +13,7 @@ Ask [Toskar](https://toskar.ai), your own local AI, as a step in a GitHub Action
     ANSWER: ${{ steps.toskar.outputs.answer }}
 ```
 
-> **Preview.** It needs Toskar Core 1.11.0 or later, for `toskarctl ask` and the Linux archives.
+It needs Toskar Core 1.11.0 or later.
 
 ## Two ways to run
 
