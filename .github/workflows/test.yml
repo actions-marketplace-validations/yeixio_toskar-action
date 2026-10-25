@@ -2,7 +2,8 @@ name: test
 
 # The action against Toskar Core built from toskar-core main, served as a
 # local release: connect to a Toskar that chats with a scripted model (no
-# downloads), and start one on the runner with a real model (cached).
+# downloads), and start one on the runner with a real model (cached). And
+# as people use it: the latest published release, from GitHub.
 on:
   push:
     branches: [main]
@@ -113,6 +114,24 @@ jobs:
         with:
           prompt: Reply with one word, the opposite of ping.
           release-url: file://${{ runner.temp }}/release
+          timeout: 15m
+      - name: The answer
+        env:
+          ANSWER: ${{ steps.ask.outputs.answer }}
+        run: |
+          printf 'Answer: %s\n' "$ANSWER"
+          [ -n "$(printf '%s' "$ANSWER" | tr -d '[:space:]')" ] || { echo "::error::the answer was empty"; exit 1; }
+
+  released:
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: Ask a Toskar the action starts from the latest release
+        id: ask
+        uses: ./
+        with:
+          prompt: Reply with one word, the opposite of ping.
           timeout: 15m
       - name: The answer
         env:
