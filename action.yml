@@ -1,0 +1,163 @@
+name: Ask Toskar
+description: Ask Toskar, your own local AI, as a workflow step, on your runners and your models. Issue text, code, and logs never go to a hosted AI.
+author: Yeix.io
+branding:
+  icon: message-square
+  color: green
+
+inputs:
+  prompt:
+    description: What to ask, such as "Summarize this bug in two sentences".
+    required: true
+  input:
+    description: Text to work on, such as an issue's body or a log. It's sent as data apart from the prompt, so an instruction inside it isn't followed.
+    required: false
+    default: ""
+  input-file:
+    description: A file to work on, instead of input.
+    required: false
+    default: ""
+  json-schema:
+    description: A JSON Schema file. The answer is JSON that fits it, or the step fails (exit 3).
+    required: false
+    default: ""
+  model:
+    description: A model, auto, or a specialized AI (sai:<slug>). Default auto.
+    required: false
+    default: ""
+  profile:
+    description: Answer as this profile instead of a model.
+    required: false
+    default: ""
+  system:
+    description: A system prompt.
+    required: false
+    default: ""
+  max-tokens:
+    description: The longest answer, in tokens.
+    required: false
+    default: ""
+  temperature:
+    description: Sampling temperature, such as 0 for the steadiest answers.
+    required: false
+    default: ""
+  timeout:
+    description: How long to wait for the answer, such as 10m.
+    required: false
+    default: 10m
+  url:
+    description: A Toskar the runner can reach, such as http://studio.local:7331. Without it, the action starts a Toskar on the runner.
+    required: false
+    default: ""
+  api-key:
+    description: An API key for url, made with For a CI job on Toskar's API Access page. Pass it from a secret.
+    required: false
+    default: ""
+  start-model:
+    description: The model to install when the action starts Toskar on the runner. Small models suit hosted runners' CPUs.
+    required: false
+    default: llama-3.2-1b-q4
+  cache:
+    description: Cache the started Toskar's models and llama.cpp between runs.
+    required: false
+    default: "true"
+  version:
+    description: The Toskar release to install on the runner, such as 1.11.0. Default the latest.
+    required: false
+    default: ""
+  release-url:
+    description: Where the release's files are, instead of GitHub's releases, as for testing a build.
+    required: false
+    default: ""
+
+outputs:
+  answer:
+    description: The answer. With json-schema, compact JSON that fits it.
+    value: ${{ steps.ask.outputs.answer }}
+
+runs:
+  using: composite
+  steps:
+    - name: Cache Toskar's models
+      if: inputs.url == '' && inputs.cache == 'true'
+      uses: actions/cache@v6
+      with:
+        path: |
+          ${{ runner.temp }}/toskar/data/models
+          ${{ runner.temp }}/toskar/data/runtimes
+        key: toskar-${{ runner.os }}-${{ runner.arch }}-${{ inputs.start-model }}
+
+    - name: Set up Toskar
+      shell: bash
+      env:
+        TOSKAR_URL_INPUT: ${{ inputs.url }}
+        START_MODEL: ${{ inputs.start-model }}
+        TOSKAR_VERSION: ${{ inputs.version }}
+        TOSKAR_RELEASE_URL: ${{ inputs.release-url }}
+      run: |
+        set -euo pipefail
+        if [ -n "$TOSKAR_RELEASE_URL" ]; then
+          base="${TOSKAR_RELEASE_URL%/}"
+        elif [ -n "$TOSKAR_VERSION" ]; then
+          base="https://github.com/yeixio/toskar-core/releases/download/v${TOSKAR_VERSION#v}"
+        else
+          base="https://github.com/yeixio/toskar-core/releases/latest/download"
+        fi
+        curl -fsSL --retry 3 -o "$RUNNER_TEMP/toskar-install.sh" "$base/install.sh"
+        if [ -n "$TOSKAR_URL_INPUT" ]; then
+          # A Toskar elsewhere: toskarctl only.
+          sh "$RUNNER_TEMP/toskar-install.sh" ci --no-start
+        elif command -v toskarctl >/dev/null 2>&1 && [ -n "${TOSKAR_URL:-}" ] && curl -fsS -m 2 "$TOSKAR_URL/api/v1/health" >/dev/null 2>&1; then
+          # Started by an earlier step of this job.
+          echo "Toskar is already running at $TOSKAR_URL"
+        else
+          # The job's own folder and a free port: jobs that share a
+          # self-hosted runner's computer each run their own.
+          port="$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])' 2>/dev/null || echo 17331)"
+          sh "$RUNNER_TEMP/toskar-install.sh" ci --dir "$RUNNER_TEMP/toskar" --port "$port" --model "$START_MODEL"
+        fi
+
+    - name: Ask
+      id: ask
+      shell: bash
+      env:
+        PROMPT: ${{ inputs.prompt }}
+        INPUT_TEXT: ${{ inputs.input }}
+        INPUT_FILE: ${{ inputs.input-file }}
+        JSON_SCHEMA: ${{ inputs.json-schema }}
+        MODEL: ${{ inputs.model }}
+        PROFILE: ${{ inputs.profile }}
+        SYSTEM: ${{ inputs.system }}
+        MAX_TOKENS: ${{ inputs.max-tokens }}
+        TEMPERATURE: ${{ inputs.temperature }}
+        TIMEOUT: ${{ inputs.timeout }}
+        URL_INPUT: ${{ inputs.url }}
+        API_KEY: ${{ inputs.api-key }}
+      run: |
+        set -uo pipefail
+        if [ -n "$API_KEY" ]; then echo "::add-mask::$API_KEY"; export TOSKAR_API_KEY="$API_KEY"; fi
+        if [ -n "$URL_INPUT" ]; then export TOSKAR_URL="$URL_INPUT"; fi
+        args=(ask --timeout "$TIMEOUT")
+        [ -n "$MODEL" ] && args+=(--model "$MODEL")
+        [ -n "$PROFILE" ] && args+=(--profile "$PROFILE")
+        [ -n "$SYSTEM" ] && args+=(--system "$SYSTEM")
+        [ -n "$JSON_SCHEMA" ] && args+=(--json-schema "$JSON_SCHEMA")
+        [ -n "$MAX_TOKENS" ] && args+=(--max-tokens "$MAX_TOKENS")
+        [ -n "$TEMPERATURE" ] && args+=(--temperature "$TEMPERATURE")
+        [ -n "$INPUT_FILE" ] && args+=(--file "$INPUT_FILE")
+        args+=("$PROMPT")
+        answer="$RUNNER_TEMP/toskar-answer.txt"
+        if [ -n "$INPUT_TEXT" ] && [ -z "$INPUT_FILE" ]; then
+          printf '%s' "$INPUT_TEXT" | toskarctl "${args[@]}" >"$answer"
+        else
+          toskarctl "${args[@]}" >"$answer" </dev/null
+        fi
+        code=$?
+        cat "$answer"
+        delimiter="TOSKAR_ANSWER_$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
+        {
+          printf 'answer<<%s\n' "$delimiter"
+          cat "$answer"
+          printf '%s\n' "$delimiter"
+        } >>"$GITHUB_OUTPUT"
+        exit "$code"
