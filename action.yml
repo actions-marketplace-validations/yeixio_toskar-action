@@ -1,5 +1,5 @@
 name: Ask Toskar
-description: Ask Toskar, your own local AI, as a workflow step, on your runners and your models. Issue text, code, and logs never go to a hosted AI.
+description: Ask Toskar, your own local AI, in a workflow. Issue text, code, and logs never go to a hosted AI.
 author: Yeix.io
 branding:
   icon: message-square
