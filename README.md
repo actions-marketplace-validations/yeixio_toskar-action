@@ -106,6 +106,12 @@ The action passes what it's given to its scripts as environment variables, never
 
 GitLab, Forgejo, and other CI systems use the same pieces from a shell: `install.sh ci` and `toskarctl ask` ([Toskar in CI](https://github.com/yeixio/toskar-core/blob/main/docs/ci.md)).
 
+## Support Toskar
+
+Ask Toskar is free and open source. If it's useful to you, you can [donate to Toskar](https://yeix.io/donate/toskar), once or monthly, by card. Donations pay for its development. Nothing is held back for donors.
+
+[![Donate to Toskar](https://img.shields.io/badge/Donate-Support_Toskar-ff6a55?style=for-the-badge&logo=stripe&logoColor=white)](https://yeix.io/donate/toskar)
+
 ## License
 
 Apache 2.0.
