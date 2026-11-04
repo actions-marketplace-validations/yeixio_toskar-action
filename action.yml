@@ -79,13 +79,24 @@ runs:
   using: composite
   steps:
     - name: Cache Toskar's models
-      if: inputs.url == '' && inputs.cache == 'true'
+      if: inputs.url == '' && inputs.cache == 'true' && runner.environment == 'github-hosted'
       uses: actions/cache@v6
       with:
         path: |
           ${{ runner.temp }}/toskar/data/models
           ${{ runner.temp }}/toskar/data/runtimes
         key: toskar-${{ runner.os }}-${{ runner.arch }}-${{ inputs.start-model }}
+
+    # A self-hosted runner keeps them on its disk, instead of moving them to and
+    # from GitHub's cache over its internet connection.
+    - name: Keep Toskar's models on the runner
+      if: inputs.url == '' && inputs.cache == 'true' && runner.environment != 'github-hosted'
+      shell: bash
+      run: |
+        keep="$RUNNER_TOOL_CACHE/toskar-action"
+        mkdir -p "$keep/models" "$keep/runtimes" "$RUNNER_TEMP/toskar/data"
+        ln -sfn "$keep/models" "$RUNNER_TEMP/toskar/data/models"
+        ln -sfn "$keep/runtimes" "$RUNNER_TEMP/toskar/data/runtimes"
 
     - name: Set up Toskar
       shell: bash
