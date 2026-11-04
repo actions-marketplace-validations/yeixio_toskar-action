@@ -55,7 +55,7 @@ Later steps of the same job reuse the Toskar the first one started.
 | `timeout` | How long to wait for the answer: `10m` unless set. |
 | `url`, `api-key` | A Toskar the runner can reach, and its key. Without `url`, the action starts one on the runner. |
 | `start-model` | The model to install when starting Toskar on the runner. |
-| `cache` | Cache the started Toskar's models and llama.cpp. `true` unless set. |
+| `cache` | Keep the started Toskar's models and llama.cpp between runs: in GitHub's cache on GitHub's runners, and on disk on self-hosted runners. `true` unless set. |
 | `version` | The Toskar release to install, such as `1.11.0`. The latest unless set. |
 
 **Output:** `answer`, the answer, or with `json-schema`, compact JSON that fits it.

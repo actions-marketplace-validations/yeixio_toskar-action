@@ -32,6 +32,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: core/go.mod
+          cache: ${{ runner.environment == 'github-hosted' }}
       - name: A release from toskar-core main
         run: ./scripts/local-release.sh core "$RUNNER_TEMP/release"
       - name: A Toskar that chats with a scripted model
@@ -106,6 +107,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: core/go.mod
+          cache: ${{ runner.environment == 'github-hosted' }}
       - name: A release from toskar-core main
         run: ./scripts/local-release.sh core "$RUNNER_TEMP/release"
       - name: Ask a Toskar the action starts on the runner
