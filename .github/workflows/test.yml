@@ -25,16 +25,16 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           repository: yeixio/toskar-core
           path: core
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           repository: yeixio/toskar-sdks
           path: sdks
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: core/go.mod
           cache: ${{ runner.environment == 'github-hosted' }}
@@ -104,12 +104,12 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           repository: yeixio/toskar-core
           path: core
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: core/go.mod
           cache: ${{ runner.environment == 'github-hosted' }}
@@ -133,7 +133,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Ask a Toskar the action starts from the latest release
         id: ask
         uses: ./
